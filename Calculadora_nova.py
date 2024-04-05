@@ -50,12 +50,10 @@ def calcular_parcelas_valor(valor_total, valor_parcela, taxa_juros_mensal, data_
     parcelas = []
     saldo_devedor = valor_total
     data_vencimento = data_inicio
-    # saldo_devedor_anterior = (valor_total + taxa_juros_mensal) - valor_parcela
     while saldo_devedor > 0:
         amortizacao = valor_parcela - saldo_devedor * taxa_juros_mensal
-        # saldo_devedor_anterior = (saldo_devedor + taxa_juros_mensal) - valor_parcela
-        parcelas.append({'Data Vencimento': data_vencimento, 'Saldo Devedor': saldo_devedor, 'Valor Parcela': valor_parcela, 
-                         'Juros': saldo_devedor * taxa_juros_mensal, 'Amortização': amortizacao})
+        parcelas.append({'Parcela': len(parcelas) + 1, 'Data Vencimento': data_vencimento, 'Saldo Devedor': saldo_devedor, 
+                         'Valor Parcela': valor_parcela, 'Juros': saldo_devedor * taxa_juros_mensal, 'Amortização': amortizacao})
         saldo_devedor -= amortizacao
         if periodicidade == 'Mensal':
             data_vencimento += timedelta(days=30)
@@ -66,7 +64,13 @@ def calcular_parcelas_valor(valor_total, valor_parcela, taxa_juros_mensal, data_
         elif periodicidade == 'A cada 2 dias':
             data_vencimento += timedelta(days=2)
 
-    return pd.DataFrame(parcelas)
+    df = pd.DataFrame(parcelas)
+    df['Saldo Devedor'] = df['Saldo Devedor'].map(formatar_numero)
+    df['Valor Parcela'] = df['Valor Parcela'].map(formatar_numero)
+    df['Juros'] = df['Juros'].map(formatar_numero)
+    df['Amortização'] = df['Amortização'].map(formatar_numero)
+
+    return df
 
 st.title('Calculadora Financeira da Confiança')
 
@@ -116,5 +120,3 @@ elif modo_calculo == 'Valor mínimo da parcela':
         if st.button('Nova simulação'):
             df.to_excel('resultados_financiamento.xlsx', index=False)
             st.success('Arquivo Excel gerado com sucesso!')
-
-
