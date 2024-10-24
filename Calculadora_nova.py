@@ -2,7 +2,56 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime, timedelta
 import numpy as np
+import os
+import json
+from dateutil.relativedelta import relativedelta
+from sqlalchemy import create_engine
+import pymssql
 import locale
+
+def get_log_user():
+    caminho_arquivo_json = 'usuarios.json'
+
+    with open(caminho_arquivo_json, 'r', encoding='utf-8') as file:
+        dados = json.load(file)
+
+    usuarios_json = dados['usuarios']
+    usuarios_sistema = os.listdir("C:\\Users")
+    usuarios_sistema = [usuario_pc.lower() for usuario_pc in usuarios_sistema]
+    usuarios_comuns = []
+    try:
+        for usuario_info in usuarios_json: 
+            for usuario, valor in usuario_info.items():  
+                if usuario.lower() in usuarios_sistema:  
+                    usuarios_comuns.append(usuario)
+                    usuarios_comuns.append(valor)  
+    except:
+        string_user = os.path.expanduser("~")
+        string_user = string_user.split(os.path.sep)
+        usuarios_comuns = [string_user[2],"Departamento sem info"]
+
+    if usuarios_comuns == []:
+
+        string_user = os.path.expanduser("~")
+        string_user = string_user.split(os.path.sep)
+        usuarios_comuns = [string_user[2],"Departamento sem info"]
+        
+    caminho_script = os.path.abspath(__file__)
+    nome_arquivo = os.path.basename(caminho_script)
+
+    robo = nome_arquivo.replace('.py','')
+    tempo = datetime.now().strftime('%Y-%m-%d %H:%M')
+
+    return usuarios_comuns + [robo] + [tempo]
+
+def post_log_user(logs):
+    columns = ['usuario','departamento','nome_robo','criado_em']
+    df_logs = pd.DataFrame([logs],columns = columns)
+    df_logs['criado_em'] = pd.to_datetime(df_logs['criado_em'])
+    engine = create_engine(f'mssql+pymssql://paulo.medeiros:admin123@10.10.100.12/dbJestor')
+    df_logs.to_sql('tb_log_bots',con = engine,if_exists='append',index=False,schema='dbo')
+    engine.dispose()
+
 
 def formatar_numero(numero):
     return f'R$ {numero:,.2f}'.replace('.', '#').replace(',', '.').replace('#', ',')
@@ -19,7 +68,7 @@ def calcular_parcelas_numero(valor_total, numero_parcelas, taxa_juros_mensal, da
     datas_vencimento = [data_inicio]
     if periodicidade == 'Mensal':
         for i in range(1, numero_parcelas):
-            datas_vencimento.append(datas_vencimento[i-1] + timedelta(days=30))
+            datas_vencimento.append(data_inicio + relativedelta(months=i))
     elif periodicidade == 'Quinzenal':
         for i in range(1, numero_parcelas):
             datas_vencimento.append(datas_vencimento[i-1] + timedelta(days=15))
