@@ -5,7 +5,6 @@ import numpy as np
 import os
 import json
 from dateutil.relativedelta import relativedelta
-import pymssql
 import locale
 
 
